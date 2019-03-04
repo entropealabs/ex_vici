@@ -3,7 +3,7 @@ defmodule VICI.Mixfile do
 
   def project do
     [
-      app: :ex_vici
+      app: :ex_vici,
       version: "0.1.0",
       elixir: "~> 1.5",
       start_permanent: Mix.env == :prod,
