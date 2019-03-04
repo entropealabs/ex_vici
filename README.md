@@ -16,7 +16,7 @@ Local UNIX sockets should work fine, but there has been limited testing done.
 
 ## Example usage
 
-Ensure you have a StrongSwan server running locally with the VICI plugin opening a socket at `tcp://127.0.0.1`
+Ensure you have a StrongSwan server running locally with the VICI plugin opening a socket at `tcp://127.0.0.1:5000`
 
 [Docs](https://wiki.strongswan.org/projects/strongswan/wiki/Vici)
 
