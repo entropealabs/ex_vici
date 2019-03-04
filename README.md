@@ -1,6 +1,6 @@
 # VICI
 
-The Versatile IKE Control Interface (VICI) protocol is used by [StrongSwan](https://strongswan.org/) for controlling and monitoring the Charon daemon.
+The Versatile IKE Control Interface (VICI) protocol is used by [strongSwan](https://strongswan.org/) for controlling and monitoring the Charon daemon.
 
 It's a simple binary protocol interfaced over a socket, TCP or local/UNIX.
 
