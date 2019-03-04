@@ -7,6 +7,7 @@ defmodule VICI.Mixfile do
       version: "0.1.0",
       elixir: "~> 1.5",
       start_permanent: Mix.env == :prod,
+      elixirc_paths: elixirc_paths(Mix.env),
       deps: deps()
     ]
   end
@@ -15,6 +16,10 @@ defmodule VICI.Mixfile do
     [
       extra_applications: [:logger],
     ]
+  end
+
+  def elixirc_paths(_) do
+    ["lib", "test/support"]
   end
 
   defp deps do

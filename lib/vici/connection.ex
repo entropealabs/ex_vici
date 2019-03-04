@@ -78,6 +78,7 @@ defmodule VICI.Connection do
     after
       4_000 ->
         :gen_tcp.close(sock)
+        {:error, :timeout}
     end
   end
 
