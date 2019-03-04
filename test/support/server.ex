@@ -9,49 +9,60 @@ defmodule VICI.Server do
   end
 
   def init(port) do
-    {:ok, l_sock} = :gen_tcp.listen(port, [:binary, {:mode, :binary}])
+    {:ok, l_sock} = :gen_tcp.listen(port, [:binary, {:mode, :binary}, {:packet, 4}])
     Process.send_after(self(), :accept, 0)
-    {:ok, l_sock}
+    {:ok, {l_sock, false}}
   end
 
   defp reply(data, sock) do
     Logger.info "Replying: #{inspect data}"
     Logger.info "Sending to: #{inspect sock}"
     packet = <<1::integer-size(8)>> <> serialize(data)
-    Logger.info("#{inspect packet}")
     :gen_tcp.send(sock, packet)
   end
 
-  def handle_info(:accept, l_sock) do
-    {:ok, s} = :gen_tcp.accept(l_sock)
-    Logger.info "Accepted #{inspect s}"
-    Process.send_after(self(), :accept, 0)
-    {:noreply, l_sock}
+  defp stream(data, sock) do
+    Logger.info "Stream: #{inspect data}"
+    packet = <<7::integer-size(8)>> <> serialize(data)
+    :gen_tcp.send(sock, packet)
   end
 
-  def handle_info({:tcp, sock, <<_len::integer-size(32), 0::integer, cmd_len::integer, cmd::binary-size(cmd_len), args::binary()>>}, l_sock) do
+  def handle_info(:accept, {l_sock, _client}) do
+    {:ok, s} = :gen_tcp.accept(l_sock)
+    Logger.info "Accepted #{inspect s}"
+    {:noreply, {l_sock, true}}
+  end
+
+  def handle_info({:tcp, sock, <<0::integer, cmd_len::integer, cmd::binary-size(cmd_len), args::binary()>>}, l_sock) do
     Logger.info("Command: #{cmd}")
-    Logger.info("Socket: #{inspect sock} - #{inspect l_sock}")
+    Logger.info("Client Socket: #{inspect sock}")
     cmd
     |> handle_command(sock, deserialize(args))
     |> reply(sock)
     {:noreply, l_sock}
   end
 
-  def handle_info({:tcp, _s, data}, l_sock) do
-    Logger.info "Got data: #{data}"
+  def handle_info({:tcp, s, data}, l_sock) do
+    Logger.info "Got data: #{inspect data}"
+    reply(%{test: "true"}, s)
     {:noreply, l_sock}
   end
 
-  def handle_info({:tcp_closed, _}, l_sock) do
-    {:noreply, l_sock}
+  def handle_info({:tcp_closed, s}, {l_sock, _client}) do
+    Logger.info "Socket Closed: #{inspect s}"
+    Process.send_after(self(), :accept, 0)
+    {:noreply, {l_sock, false}}
   end
 
-  def handle_info({:sas, sock}, l_sock) do
-    reply(generate_sas(), sock)
-    Process.send_after(self(), {:sas, sock}, 100)
-    {:noreply, l_sock}
+  def handle_info({:sas, sock}, {_l_sock, true} = state) do
+    Enum.each(1..100, fn _i ->
+      stream(generate_sas(), sock)
+      Process.sleep(100)
+    end)
+    {:noreply, state}
   end
+
+  def handle_info({:sas, _sock}, state), do: {:noreply, state}
 
   defp handle_command(cmd, sock, args \\ %{})
   defp handle_command("version", _sock, _args) do
@@ -84,7 +95,7 @@ defmodule VICI.Server do
 
   defp handle_command("list-sas", sock, _args) do
     Process.send_after(self(), {:sas, sock}, 100)
-    generate_sas()
+    %{}
   end
 
   defp generate_sas() do

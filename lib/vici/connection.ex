@@ -1,33 +1,20 @@
 defmodule VICI.Connection do
   import VICI.Protocol
+  require Logger
 
   def request(address, port, command, args \\ %{}) do
-    Task.await(
-      Task.async(fn ->
-        {:ok, sock} = connect(address, port)
-        send(:request, command, args, sock)
-      end)
-    )
+    {:ok, sock} = connect(address, port)
+    send(:request, command, args, sock)
   end
 
   def request_stream(address, port, command, args \\ %{}, timeout \\ 10_000) do
-    Task.await(
-      Task.async(fn ->
-        {:ok, sock} = connect(address, port)
-        send(:request_stream, command, args, timeout, sock)
-      end),
-      timeout
-    )
+    {:ok, sock} = connect(address, port)
+    send(:request_stream, command, args, timeout, sock)
   end
 
   def register(address, port, event, timeout \\ 10_000) do
-    Task.await(
-      Task.async(fn ->
-        {:ok, sock} = connect(address, port)
-        send(:register, event, timeout, sock)
-      end),
-      timeout
-    )
+    {:ok, sock} = connect(address, port)
+    send(:register, event, timeout, sock)
   end
 
   defp connect({:local, address}, port) when is_list(address) do
@@ -94,7 +81,7 @@ defmodule VICI.Connection do
         {:error, :unknown_registration}
 
       {:tcp, _port, <<7::integer, data::binary()>>} ->
-        {[deserialize(data)], []}
+        {[deserialize(data)], {sock, timeout}}
 
       _ ->
         loop_stream(sock, timeout)
@@ -109,7 +96,8 @@ defmodule VICI.Connection do
     Stream.resource(
       fn -> {sock, timeout} end,
       fn {sock, timeout} -> loop_stream(sock, timeout) end,
-      fn {sock, _} -> :gen_tcp.close(sock) end
+      fn {sock, _} -> :gen_tcp.close(sock)
+      end
     )
   end
 end
