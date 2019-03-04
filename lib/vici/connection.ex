@@ -14,17 +14,19 @@ defmodule VICI.Connection do
     Task.await(
       Task.async(fn ->
         {:ok, sock} = connect(address, port)
-        send(:request_stream, command, args, sock, timeout)
-      end)
+        send(:request_stream, command, args, timeout, sock)
+      end),
+      timeout
     )
   end
 
-  def register(address, port, event, args \\ %{}, timeout \\ 10_000) do
+  def register(address, port, event, timeout \\ 10_000) do
     Task.await(
       Task.async(fn ->
         {:ok, sock} = connect(address, port)
-        send(:register, event, args, sock, timeout)
-      end)
+        send(:register, event, timeout, sock)
+      end),
+      timeout
     )
   end
 
@@ -49,13 +51,13 @@ defmodule VICI.Connection do
     loop_request(sock)
   end
 
-  defp send(:request_stream, command, args, sock, timeout) do
-    :ok = do_send(0, command, args, sock)
+  defp send(:register, event, timeout, sock) do
+    :ok = do_send(3, event, %{}, sock)
     loop_stream(sock, timeout)
   end
 
-  defp send(:register, event, args, sock, timeout) do
-    :ok = do_send(3, event, args, sock)
+  defp send(:request_stream, command, args, timeout, sock) do
+    :ok = do_send(0, command, args, sock)
     loop_stream(sock, timeout)
   end
 
@@ -81,13 +83,11 @@ defmodule VICI.Connection do
 
   defp loop_stream(sock, timeout) do
     receive do
+      {:tcp, _port, <<1::integer>>} ->
+        {:ok, create_stream(sock, timeout)}
+
       {:tcp, _port, <<5::integer>>} ->
-        {:ok,
-         Stream.resource(
-           fn -> {sock, timeout} end,
-           fn {sock, timeout} -> loop_stream(sock, timeout) end,
-           fn {sock, _} -> :gen_tcp.close(sock) end
-         )}
+        {:ok, create_stream(sock, timeout)}
 
       {:tcp, _port, <<6::integer>>} ->
         {:error, :unknown_registration}
@@ -102,5 +102,13 @@ defmodule VICI.Connection do
         :gen_tcp.close(sock)
         {:halt, {sock, timeout}}
     end
+  end
+
+  defp create_stream(sock, timeout) do
+    Stream.resource(
+      fn -> {sock, timeout} end,
+      fn {sock, timeout} -> loop_stream(sock, timeout) end,
+      fn {sock, _} -> :gen_tcp.close(sock) end
+    )
   end
 end
