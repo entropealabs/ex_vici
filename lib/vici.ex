@@ -19,6 +19,16 @@ defmodule VICI do
     child_rekey: "child-rekey"
   }
 
+  @request_streams %{
+    initiate: {"initiate", :control_log},
+    terminate: {"terminate", :control_log},
+    list_sas: {"list-sas", :list_sa},
+    list_policies: {"list-policies", :list_policy},
+    list_conns: {"list-conns", :list_conn},
+    list_certs: {"list-certs", :list_cert},
+    list_authorities: {"list-authorities", :list_authority}
+  }
+
   def register(key, timeout, address, port) do
     case Map.get(@events, key) do
       nil -> {:error, :unknown_event}
@@ -40,11 +50,15 @@ defmodule VICI do
   end
 
   def initiate(address, port, args \\ %{}, timeout \\ 1000) do
-    Conn.request_stream(address, port, "initiate", args, timeout)
+    {cmd, event} = Map.get(@request_streams, :initiate)
+    event = Map.get(@events, event)
+    Conn.request_stream(address, port, {cmd, event}, args, timeout)
   end
 
   def terminate(address, port, args \\ %{}, timeout \\ 1000) do
-    Conn.request_stream(address, port, "terminate", args, timeout)
+    {cmd, event} = Map.get(@request_streams, :terminate)
+    event = Map.get(@events, event)
+    Conn.request_stream(address, port, {cmd, event}, args, timeout)
   end
 
   def rekey(address, port, args \\ %{}) do
@@ -64,15 +78,21 @@ defmodule VICI do
   end
 
   def list_sas(address, port, args \\ %{}, timeout \\ 1000) do
-    Conn.request_stream(address, port, "list-sas", args, timeout)
+    {cmd, event} = Map.get(@request_streams, :list_sas)
+    event = Map.get(@events, event)
+    Conn.request_stream(address, port, {cmd, event}, args, timeout)
   end
 
   def list_policies(address, port, args \\ %{}, timeout \\ 1000) do
-    Conn.request_stream(address, port, "list-policies", args, timeout)
+    {cmd, event} = Map.get(@request_streams, :list_policies)
+    event = Map.get(@events, event)
+    Conn.request_stream(address, port, {cmd, event}, args, timeout)
   end
 
   def list_conns(address, port, args \\ %{}, timeout \\ 1000) do
-    Conn.request_stream(address, port, "list-conns", args, timeout)
+    {cmd, event} = Map.get(@request_streams, :list_conns)
+    event = Map.get(@events, event)
+    Conn.request_stream(address, port, {cmd, event}, args, timeout)
   end
 
   def get_conns(address, port) do
@@ -80,11 +100,15 @@ defmodule VICI do
   end
 
   def list_certs(address, port, args \\ %{}, timeout \\ 1000) do
-    Conn.request_stream(address, port, "list-certs", args, timeout)
+    {cmd, event} = Map.get(@request_streams, :list_certs)
+    event = Map.get(@events, event)
+    Conn.request_stream(address, port, {cmd, event}, args, timeout)
   end
 
   def list_authorities(address, port, args \\ %{}, timeout \\ 1000) do
-    Conn.request_stream(address, port, "list-authorities", args, timeout)
+    {cmd, event} = Map.get(@request_streams, :list_authorities)
+    event = Map.get(@events, event)
+    Conn.request_stream(address, port, {cmd, event}, args, timeout)
   end
 
   def get_authorities(address, port) do
