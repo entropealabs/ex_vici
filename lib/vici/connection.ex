@@ -84,7 +84,8 @@ defmodule VICI.Connection do
         Logger.info("Got message: #{inspect name}")
         {[{String.to_atom(name), deserialize(data)}], {sock, timeout}}
 
-      _ ->
+      o ->
+        Logger.info("Got message: #{inspect o}")
         loop_stream(sock, timeout)
     after
       timeout ->
