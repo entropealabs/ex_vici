@@ -36,7 +36,6 @@ defmodule VICI.Connection do
 
   defp send(:request_stream, command, event, args, timeout, sock) do
     :ok = do_send(0, command, args, sock)
-    :timer.sleep(100)
     :ok = do_send(3, event, %{}, sock)
     loop_stream(sock, timeout)
   end
