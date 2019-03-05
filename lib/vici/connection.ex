@@ -80,8 +80,8 @@ defmodule VICI.Connection do
       {:tcp, _port, <<6::integer>>} ->
         {:error, :unknown_event}
 
-      {:tcp, _port, <<7::integer, data::binary()>>} ->
-        {[deserialize(data)], {sock, timeout}}
+      {:tcp, _port, <<7::integer, n_len::integer, name::binary-size(n_len), data::binary()>>} ->
+        {[{String.to_atom(name), deserialize(data)}], {sock, timeout}}
 
       _ ->
         loop_stream(sock, timeout)

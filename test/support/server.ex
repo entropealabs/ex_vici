@@ -30,7 +30,9 @@ defmodule VICI.Server do
 
   defp stream(data, sock) do
     Logger.info "Stream: #{inspect data}"
-    packet = <<7::integer-size(8)>> <> serialize(data)
+    name = "log"
+    n_len = String.length(name)
+    packet = <<7::integer-size(8), n_len::integer-size(8), name::binary()>> <> serialize(data)
     :gen_tcp.send(sock, packet)
   end
 
