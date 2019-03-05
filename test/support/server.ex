@@ -21,9 +21,28 @@ defmodule VICI.Server do
     :gen_tcp.send(sock, packet)
   end
 
+  defp confirm(data, sock) do
+    Logger.info "Confirming"
+    Logger.info "Sending to: #{inspect sock}"
+    packet = <<5::integer-size(8)>> <> serialize(data)
+    :gen_tcp.send(sock, packet)
+  end
+
   defp stream(data, sock) do
     Logger.info "Stream: #{inspect data}"
     packet = <<7::integer-size(8)>> <> serialize(data)
+    :gen_tcp.send(sock, packet)
+  end
+
+  defp unknown_command(sock) do
+    Logger.info "Uknown Command"
+    packet = <<2::integer-size(8)>>
+    :gen_tcp.send(sock, packet)
+  end
+
+  defp unknown_event(sock) do
+    Logger.info "Uknown Event"
+    packet = <<6::integer-size(8)>>
     :gen_tcp.send(sock, packet)
   end
 
@@ -36,15 +55,32 @@ defmodule VICI.Server do
   def handle_info({:tcp, sock, <<0::integer, cmd_len::integer, cmd::binary-size(cmd_len), args::binary()>>}, l_sock) do
     Logger.info("Command: #{cmd}")
     Logger.info("Client Socket: #{inspect sock}")
-    cmd
-    |> handle_command(sock, deserialize(args))
-    |> reply(sock)
+    case handle_command(cmd, sock, deserialize(args)) do
+      :unknown_cmd -> unknown_command(sock)
+      res -> reply(res, sock)
+    end
     {:noreply, l_sock}
+  end
+
+  def handle_info({:tcp, sock, <<3::integer, cmd_len::integer, cmd::binary-size(cmd_len), args::binary()>>}, l_sock) do
+    Logger.info("Command: #{cmd}")
+    Logger.info("Client Socket: #{inspect sock}")
+    case handle_event(cmd, sock, deserialize(args)) do
+      :unknown_cmd -> unknown_event(sock)
+      res -> confirm(res, sock)
+    end
+    {:noreply, l_sock}
+  end
+
+  def handle_info({:tcp, sock, <<4::integer, cmd_len::integer, cmd::binary-size(cmd_len)>>}, {l_sock, _c}) do
+    Logger.info("Unregister: #{cmd}")
+    :gen_tcp.close(sock)
+    {:noreply, {l_sock, false}}
   end
 
   def handle_info({:tcp, s, data}, l_sock) do
     Logger.info "Got data: #{inspect data}"
-    reply(%{test: "true"}, s)
+    unknown_command(s)
     {:noreply, l_sock}
   end
 
@@ -63,6 +99,24 @@ defmodule VICI.Server do
   end
 
   def handle_info({:sas, _sock}, state), do: {:noreply, state}
+
+  def handle_info({:log, sock}, {_l_sock, true} = state) do
+    Enum.each(1..100, fn _i ->
+      stream(generate_log(), sock)
+      Process.sleep(100)
+    end)
+    {:noreply, state}
+  end
+
+  def handle_info({:log, _sock}, state), do: {:noreply, state}
+
+  defp handle_event(event, sock, args \\ %{})
+  defp handle_event("log", sock, _args) do
+    Process.send_after(self(), {:log, sock}, 100)
+    %{}
+  end
+
+  defp handle_event(_, _, _), do: :unknown_cmd
 
   defp handle_command(cmd, sock, args \\ %{})
   defp handle_command("version", _sock, _args) do
@@ -98,7 +152,20 @@ defmodule VICI.Server do
     %{}
   end
 
-  defp generate_sas() do
+  defp handle_command(_, _, _), do: :unknown_cmd
+
+  defp generate_log do
+    %{
+      group: "ike",
+      level: 2,
+      thread: 4,
+      "ikesa-name": "kiosk-10-a",
+      "ikesa-uniqued": "sd876876",
+      msg: "this is a log message"
+    }
+  end
+
+  defp generate_sas do
     %{
       id: :rand.uniform(99999),
       bytes_in: :rand.uniform(9999999999999),

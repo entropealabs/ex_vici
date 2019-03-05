@@ -20,7 +20,11 @@ defmodule VICI do
   }
 
   def register(key, timeout, address, port) do
-    Conn.register(address, port, Map.get(@events, key), timeout)
+    case Map.get(@events, key) do
+      nil -> {:error, :unknown_event}
+      event -> Conn.register(address, port, event, timeout)
+    end
+
   end
 
   def version(address, port) do
@@ -35,11 +39,11 @@ defmodule VICI do
     Conn.request(address, port, "reload-settings")
   end
 
-  def initiate(address, port, args \\ %{}, timeout \\ 5_000) do
+  def initiate(address, port, args \\ %{}, timeout \\ 1000) do
     Conn.request_stream(address, port, "initiate", args, timeout)
   end
 
-  def terminate(address, port, args \\ %{}, timeout \\ 5_000) do
+  def terminate(address, port, args \\ %{}, timeout \\ 1000) do
     Conn.request_stream(address, port, "terminate", args, timeout)
   end
 
@@ -59,15 +63,15 @@ defmodule VICI do
     Conn.request(address, port, "uninstall", args)
   end
 
-  def list_sas(address, port, args \\ %{}, timeout \\ 5_000) do
+  def list_sas(address, port, args \\ %{}, timeout \\ 1000) do
     Conn.request_stream(address, port, "list-sas", args, timeout)
   end
 
-  def list_policies(address, port, args \\ %{}, timeout \\ 5_000) do
+  def list_policies(address, port, args \\ %{}, timeout \\ 1000) do
     Conn.request_stream(address, port, "list-policies", args, timeout)
   end
 
-  def list_conns(address, port, args \\ %{}, timeout \\ 5_000) do
+  def list_conns(address, port, args \\ %{}, timeout \\ 1000) do
     Conn.request_stream(address, port, "list-conns", args, timeout)
   end
 
@@ -75,11 +79,11 @@ defmodule VICI do
     Conn.request(address, port, "get-conns")
   end
 
-  def list_certs(address, port, args \\ %{}, timeout \\ 5_000) do
+  def list_certs(address, port, args \\ %{}, timeout \\ 1000) do
     Conn.request_stream(address, port, "list-certs", args, timeout)
   end
 
-  def list_authorities(address, port, args \\ %{}, timeout \\ 5_000) do
+  def list_authorities(address, port, args \\ %{}, timeout \\ 1000) do
     Conn.request_stream(address, port, "list-authorities", args, timeout)
   end
 

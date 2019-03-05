@@ -7,12 +7,12 @@ defmodule VICI.Connection do
     send(:request, command, args, sock)
   end
 
-  def request_stream(address, port, command, args \\ %{}, timeout \\ 10_000) do
+  def request_stream(address, port, command, args \\ %{}, timeout \\ 1000) do
     {:ok, sock} = connect(address, port)
     send(:request_stream, command, args, timeout, sock)
   end
 
-  def register(address, port, event, timeout \\ 10_000) do
+  def register(address, port, event, timeout \\ 1000) do
     {:ok, sock} = connect(address, port)
     send(:register, event, timeout, sock)
   end
@@ -78,7 +78,7 @@ defmodule VICI.Connection do
         {:ok, create_stream(sock, timeout)}
 
       {:tcp, _port, <<6::integer>>} ->
-        {:error, :unknown_registration}
+        {:error, :unknown_event}
 
       {:tcp, _port, <<7::integer, data::binary()>>} ->
         {[deserialize(data)], {sock, timeout}}
@@ -96,8 +96,7 @@ defmodule VICI.Connection do
     Stream.resource(
       fn -> {sock, timeout} end,
       fn {sock, timeout} -> loop_stream(sock, timeout) end,
-      fn {sock, _} -> :gen_tcp.close(sock)
-      end
+      fn {sock, _} -> :gen_tcp.close(sock) end
     )
   end
 end
