@@ -18,7 +18,7 @@ defmodule VICI.Connection do
   end
 
   defp connect({:local, address}, port) when is_list(address) do
-    :gen_tcp.connect({:local, address}, port, [:binary, {:mode, :binary}, {:packet, 4}])
+    :gen_tcp.connect({:local, address}, port, [:binary])
   end
 
   defp connect({:local, address}, port) when is_binary(address) do
@@ -26,7 +26,7 @@ defmodule VICI.Connection do
   end
 
   defp connect(address, port) when is_list(address) do
-    :gen_tcp.connect(address, port, [:binary, {:mode, :binary}, {:packet, 4}])
+    :gen_tcp.connect(address, port, [:binary])
   end
 
   defp connect(address, port) when is_binary(address) do
@@ -49,14 +49,15 @@ defmodule VICI.Connection do
   end
 
   defp do_send(type, command, args, sock) do
-    len = String.length(command)
-    message = <<type::integer, len::integer, command::binary>> <> serialize(args)
-    :gen_tcp.send(sock, message)
+    len = byte_size(command)
+    message = <<type::integer-size(8), len::integer-size(8), command::binary-size(len)>>
+    packet = <<byte_size(message)::integer-size(32)>> <> message
+    :gen_tcp.send(sock, packet)
   end
 
   defp loop_request(sock) do
     receive do
-      {:tcp, _port, <<1::integer, data::binary()>>} ->
+      {:tcp, _port, <<_l::integer-size(4), 1::integer, data::binary()>>} ->
         :gen_tcp.close(sock)
         {:ok, deserialize(data)}
 
@@ -71,19 +72,19 @@ defmodule VICI.Connection do
 
   defp loop_stream(sock, timeout) do
     receive do
-      {:tcp, _port, <<1::integer>>} = o->
+      {:tcp, _port, <<_l::integer-size(32), 1::integer>>} = o->
         Logger.info "Message: #{inspect o}"
         {:ok, create_stream(sock, timeout)}
 
-      {:tcp, _port, <<5::integer>>} = o ->
+      {:tcp, _port, <<_l::integer-size(32), 5::integer>>} = o ->
         Logger.info "Message: #{inspect o}"
         {:ok, create_stream(sock, timeout)}
 
-      {:tcp, _port, <<6::integer>>} = o->
+      {:tcp, _port, <<_l::integer-size(32), 6::integer>>} = o ->
         Logger.info "Message: #{inspect o}"
         {:error, :unknown_event}
 
-      {:tcp, _port, <<7::integer, n_len::integer, name::binary-size(n_len), data::binary()>>} = o->
+      {:tcp, _port, <<_l::integer-size(32), 7::integer, n_len::integer, name::binary-size(n_len), data::binary()>>} = o->
         Logger.info "Message: #{inspect o}"
         {[{String.to_atom(name), deserialize(data)}], {sock, timeout}}
 
