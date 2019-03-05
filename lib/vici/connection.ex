@@ -9,9 +9,17 @@ defmodule VICI.Connection do
 
   def request_stream(address, port, {command, event}, args \\ %{}, timeout \\ 1000) do
     {:ok, sock} = connect(address, port)
-    loop = send(:register, event, timeout, sock)
-    {:ok, _data} = send(:request, command, args, sock)
-    loop
+    Logger.debug("Registering Event: #{event}")
+
+    case send(:register, event, timeout, sock) do
+      {:ok, _} = loop ->
+        Logger.debug("Sending Request: #{command}")
+        {:ok, _data} = send(:request, command, args, sock)
+        loop
+
+      er ->
+        er
+    end
   end
 
   def register(address, port, event, timeout \\ 1000) do
@@ -47,17 +55,23 @@ defmodule VICI.Connection do
 
   defp do_send(type, command, args, sock) do
     len = byte_size(command)
-    message = <<type::integer-size(8), len::integer-size(8), command::binary-size(len)>> <> serialize(args)
+
+    message =
+      <<type::integer-size(8), len::integer-size(8), command::binary-size(len)>> <>
+        serialize(args)
+
     :gen_tcp.send(sock, message)
   end
 
   defp loop_request(sock) do
     receive do
-      {:tcp, _port, <<1::integer, data::binary()>>} ->
+      {:tcp, _port, <<1::integer, data::binary()>>} = o ->
+        Logger.debug("Request Complete: #{inspect(o)}")
         :gen_tcp.close(sock)
         {:ok, deserialize(data)}
 
-      _ ->
+      o ->
+        Logger.debug("Unknown Message: #{inspect(o)}")
         loop_request(sock)
     after
       4_000 ->
@@ -68,20 +82,20 @@ defmodule VICI.Connection do
 
   defp loop_stream(sock, timeout) do
     receive do
-      {:tcp, _port, <<5::integer>>} = o ->
-        Logger.info "Message: #{inspect o}"
+      {:tcp, _port, <<5::integer>>} ->
+        Logger.debug("Event Registered")
         {:ok, create_stream(sock, timeout)}
 
-      {:tcp, _port, <<6::integer>>} = o ->
-        Logger.info "Message: #{inspect o}"
+      {:tcp, _port, <<6::integer>>} ->
+        Logger.debug("Unknown Registration")
         {:error, :unknown_event}
 
-      {:tcp, _port, <<7::integer, n_len::integer, name::binary-size(n_len), data::binary()>>} = o->
-        Logger.info "Message: #{inspect o}"
+      {:tcp, _port, <<7::integer, n_len::integer, name::binary-size(n_len), data::binary()>>} ->
+        Logger.debug("Event Message: #{data}")
         {[{String.to_atom(name), deserialize(data)}], {sock, timeout}}
 
       o ->
-        Logger.info "Message: #{inspect o}"
+        Logger.debug("Unknown Message: #{inspect(o)}")
         loop_stream(sock, timeout)
     after
       timeout ->
