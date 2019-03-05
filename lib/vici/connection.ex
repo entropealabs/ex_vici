@@ -81,6 +81,7 @@ defmodule VICI.Connection do
         {:error, :unknown_event}
 
       {:tcp, _port, <<7::integer, n_len::integer, name::binary-size(n_len), data::binary()>>} ->
+        Logger.info("Got message: #{inspect name}")
         {[{String.to_atom(name), deserialize(data)}], {sock, timeout}}
 
       _ ->
