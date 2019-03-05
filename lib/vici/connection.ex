@@ -10,6 +10,7 @@ defmodule VICI.Connection do
   def request_stream(address, port, {command, event}, args \\ %{}, timeout \\ 1000) do
     {:ok, sock} = connect(address, port)
     Logger.debug("Registering Event: #{event}")
+    Logger.debug("Registering Command: #{command}")
     send(:request_stream, command, event, args, timeout, sock)
   end
 
@@ -35,8 +36,8 @@ defmodule VICI.Connection do
   end
 
   defp send(:request_stream, command, event, args, timeout, sock) do
-    :ok = do_send(0, command, args, sock)
     :ok = do_send(3, event, %{}, sock)
+    :ok = do_send(0, command, args, sock)
     loop_stream(sock, timeout)
   end
 
