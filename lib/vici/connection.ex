@@ -50,7 +50,7 @@ defmodule VICI.Connection do
 
   defp do_send(type, command, args, sock) do
     len = String.length(command)
-    message = <<type::integer-size(8), len::integer-size(8), command::binary>> <> serialize(args)
+    message = <<type::integer, len::integer, command::binary>> <> serialize(args)
     :gen_tcp.send(sock, message)
   end
 
