@@ -57,7 +57,7 @@ defmodule VICI.Connection do
 
   defp loop_request(sock) do
     receive do
-      {:tcp, _port, <<_l::integer-size(4), 1::integer, data::binary()>>} ->
+      {:tcp, _port, <<_l::integer-size(32), 1::integer, data::binary()>>} ->
         :gen_tcp.close(sock)
         {:ok, deserialize(data)}
 
