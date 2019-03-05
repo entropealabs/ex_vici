@@ -8,7 +8,11 @@ This library provides a full serialization and deserialization implementation an
 
 There is full support for the streaming interface by registering for events or making a request that returns a stream eg; log, list-sas, etc.
 
+The VICI protocol doesn't allow for multiple requests or registrations to be in-flight on the same connection at the same time, for this reason, each request opens a new gen_tcp connection.
+
 This VICI library doesn't provide any connection pooling or anything, each request is a new gen_tcp connection that is automatically cleaned up after each request.
+
+In order to support concurrent requests it is up to the implementer to manage individual processes for each connection/request. Using [Task.async](https://hexdocs.pm/elixir/1.7.4/Task.html#async/3) or a similar pattern.
 
 Any request or registration that supports the `:timeout` option accepts `:infinity` as an option to keep the connection open forever, but remember this will block forever if you don't close the Stream.resource that is returned.
 
