@@ -3,6 +3,7 @@ defmodule VICI.Connection do
   require Logger
 
   def request(address, port, command, args \\ %{}) do
+    Logger.debug("Sending Request: #{command}")
     {:ok, sock} = connect(address, port)
     send(:request, command, args, sock)
   end
@@ -23,6 +24,7 @@ defmodule VICI.Connection do
   end
 
   def register(address, port, event, timeout \\ 1000) do
+    Logger.debug("Registering Event: #{event}")
     {:ok, sock} = connect(address, port)
     send(:register, event, timeout, sock)
   end
