@@ -80,10 +80,6 @@ defmodule VICI.Connection do
 
   defp loop_stream(sock, timeout) do
     receive do
-      {:tcp, _port, <<1::integer, _::binary()>>} ->
-        Logger.debug("Request Complete")
-        loop_stream(sock, timeout)
-
       {:tcp, _port, <<5::integer>>} ->
         Logger.debug("Event Registered")
         {:ok, create_stream(sock, timeout)}
@@ -93,8 +89,13 @@ defmodule VICI.Connection do
         {:error, :unknown_event}
 
       {:tcp, _port, <<7::integer, n_len::integer, name::binary-size(n_len), data::binary()>>} ->
-        Logger.debug("Event Message: #{data}")
+        Logger.debug("Event Message")
         {[{String.to_atom(name), deserialize(data)}], {sock, timeout}}
+
+      {:tcp, _port, <<1::integer, _::binary()>>} ->
+        Logger.debug("Request Complete")
+        :gen_tcp.close(sock)
+        {:halt, {sock, timeout}}
 
       o ->
         Logger.debug("Unknown Message: #{inspect(o)}")
