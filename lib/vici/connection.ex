@@ -71,21 +71,24 @@ defmodule VICI.Connection do
 
   defp loop_stream(sock, timeout) do
     receive do
-      {:tcp, _port, <<1::integer>>} ->
+      {:tcp, _port, <<1::integer>>} = o->
+        Logger.info "Message: #{inspect o}"
         {:ok, create_stream(sock, timeout)}
 
-      {:tcp, _port, <<5::integer>>} ->
+      {:tcp, _port, <<5::integer>>} = o ->
+        Logger.info "Message: #{inspect o}"
         {:ok, create_stream(sock, timeout)}
 
-      {:tcp, _port, <<6::integer>>} ->
+      {:tcp, _port, <<6::integer>>} = o->
+        Logger.info "Message: #{inspect o}"
         {:error, :unknown_event}
 
-      {:tcp, _port, <<7::integer, n_len::integer, name::binary-size(n_len), data::binary()>>} ->
-        Logger.info("Got message: #{inspect name}")
+      {:tcp, _port, <<7::integer, n_len::integer, name::binary-size(n_len), data::binary()>>} = o->
+        Logger.info "Message: #{inspect o}"
         {[{String.to_atom(name), deserialize(data)}], {sock, timeout}}
 
       o ->
-        Logger.info("Got message: #{inspect o}")
+        Logger.info "Message: #{inspect o}"
         loop_stream(sock, timeout)
     after
       timeout ->
