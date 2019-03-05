@@ -3,7 +3,6 @@ defmodule VICI.Connection do
   require Logger
 
   def request(address, port, command, args \\ %{}) do
-    Logger.debug("Sending Request: #{command}")
     {:ok, sock} = connect(address, port)
     send(:request, command, args, sock)
   end
@@ -11,20 +10,10 @@ defmodule VICI.Connection do
   def request_stream(address, port, {command, event}, args \\ %{}, timeout \\ 1000) do
     {:ok, sock} = connect(address, port)
     Logger.debug("Registering Event: #{event}")
-
-    case send(:register, event, timeout, sock) do
-      {:ok, _} = loop ->
-        Logger.debug("Sending Request: #{command}")
-        {:ok, _data} = send(:request, command, args, sock)
-        loop
-
-      er ->
-        er
-    end
+    send(:request_stream, command, event, args, timeout, sock)
   end
 
   def register(address, port, event, timeout \\ 1000) do
-    Logger.debug("Registering Event: #{event}")
     {:ok, sock} = connect(address, port)
     send(:register, event, timeout, sock)
   end
@@ -43,6 +32,13 @@ defmodule VICI.Connection do
 
   defp connect(address, port) when is_binary(address) do
     connect(to_charlist(address), port)
+  end
+
+  defp send(:request_stream, command, event, args, timeout, sock) do
+    :ok = do_send(0, command, args, sock)
+    :timer.sleep(100)
+    :ok = do_send(3, event, %{}, sock)
+    loop_stream(sock, timeout)
   end
 
   defp send(:request, command, args, sock) do
@@ -67,8 +63,8 @@ defmodule VICI.Connection do
 
   defp loop_request(sock) do
     receive do
-      {:tcp, _port, <<1::integer, data::binary()>>} = o ->
-        Logger.debug("Request Complete: #{inspect(o)}")
+      {:tcp, _port, <<1::integer, data::binary()>>} ->
+        Logger.debug("Request Complete")
         :gen_tcp.close(sock)
         {:ok, deserialize(data)}
 
@@ -84,6 +80,10 @@ defmodule VICI.Connection do
 
   defp loop_stream(sock, timeout) do
     receive do
+      {:tcp, _port, <<1::integer, _::binary()>>} ->
+        Logger.debug("Request Complete")
+        loop_stream(sock, timeout)
+
       {:tcp, _port, <<5::integer>>} ->
         Logger.debug("Event Registered")
         {:ok, create_stream(sock, timeout)}
