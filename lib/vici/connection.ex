@@ -88,9 +88,9 @@ defmodule VICI.Connection do
         Logger.debug("Unknown Registration")
         {:error, :unknown_event}
 
-      {:tcp, _port, <<7::integer, n_len::integer, name::binary-size(n_len), data::binary()>>} ->
+      {:tcp, _port, <<7::integer, data::binary()>>} ->
         Logger.debug("Event Message")
-        {[{String.to_atom(name), deserialize(data)}], {sock, timeout}}
+        {[deserialize(data)], {sock, timeout}}
 
       {:tcp, _port, <<1::integer, _::binary()>>} ->
         Logger.debug("Request Complete")

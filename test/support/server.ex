@@ -67,7 +67,7 @@ defmodule VICI.Server do
     {:noreply, {l_sock, stream}}
   end
 
-  def handle_info({:tcp, sock, <<3::integer, cmd_len::integer, cmd::binary-size(cmd_len), args::binary()>>}, {l_sock, stream}) do
+  def handle_info({:tcp, sock, <<3::integer, cmd_len::integer, cmd::binary-size(cmd_len), args::binary()>>}, {l_sock, _s}) do
     Logger.info("Command: #{cmd}")
     Logger.info("Client Socket: #{inspect sock}")
     case handle_event(cmd, sock, deserialize(args)) do

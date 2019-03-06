@@ -59,6 +59,11 @@ defmodule VICI.Protocol do
     deserialize(rest, path, result)
   end
 
+  #NAMED EVENT
+  defp deserialize(<<n_len::integer, name::binary-size(n_len), data::binary()>>, _, _) do
+    {String.to_atom(name), deserialize(data)}
+  end
+
   defp deserialize(<<>>, _path, result), do: result
 
   def serialize(object) when is_nil(object), do: <<>>
