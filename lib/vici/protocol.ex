@@ -1,4 +1,6 @@
 defmodule VICI.Protocol do
+  require Logger
+
   def deserialize(data) do
     deserialize(data, [], %{})
   end
@@ -65,6 +67,14 @@ defmodule VICI.Protocol do
     serialize(object, <<>>)
   end
 
+  # Named event
+  def serialize(object) when is_tuple(object) do
+    name = elem(object, 0) |> Atom.to_string()
+    n_len = byte_size(name)
+    msg = <<n_len::integer-size(8), name::binary-size(n_len)>>
+    serialize(elem(object, 1), msg)
+  end
+
   # TOP LEVEL
   defp serialize(object, msg) when is_map(object) do
     Enum.reduce(object, msg, fn {k, v}, acc ->
@@ -74,7 +84,7 @@ defmodule VICI.Protocol do
 
   # LIST_ITEM
   defp serialize(value, _) when is_binary(value) do
-    v_len = String.length(value)
+    v_len = byte_size(value)
     <<5::integer-size(8), v_len::integer-size(16), value::binary()>>
   end
 
@@ -90,15 +100,15 @@ defmodule VICI.Protocol do
 
   # MAP
   defp serialize(key, value, message) when is_map(value) and is_binary(key) do
-    k_len = String.length(key)
+    k_len = byte_size(key)
     msg = <<1::integer-size(8), k_len::integer-size(8), key::binary()>>
     message <> serialize(value, msg) <> <<2::integer-size(8)>>
   end
 
   # KEY_VALUE
   defp serialize(key, value, message) when is_binary(value) and is_binary(key) do
-    k_len = String.length(key)
-    v_len = String.length(value)
+    k_len = byte_size(key)
+    v_len = byte_size(value)
 
     message <>
       <<3::integer-size(8), k_len::integer-size(8), key::binary(), v_len::integer-size(16),
@@ -112,7 +122,7 @@ defmodule VICI.Protocol do
 
   # LIST
   defp serialize(key, value, message) when is_list(value) and is_binary(key) do
-    k_len = String.length(key)
+    k_len = byte_size(key)
     msg = <<4::integer-size(8), k_len::integer-size(8), key::binary()>>
 
     msg =

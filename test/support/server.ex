@@ -3,6 +3,7 @@ defmodule VICI.Server do
   require Logger
 
   import VICI.Protocol
+  import VICI.Server.Generator
 
   def start_link(port) do
     GenServer.start_link(__MODULE__, port)
@@ -30,9 +31,7 @@ defmodule VICI.Server do
 
   defp stream(data, sock) do
     Logger.info "Stream: #{inspect data}"
-    name = "log"
-    n_len = String.length(name)
-    packet = <<7::integer-size(8), n_len::integer-size(8), name::binary()>> <> serialize(data)
+    packet = <<7::integer-size(8)>> <> serialize(data)
     :gen_tcp.send(sock, packet)
   end
 
@@ -51,27 +50,31 @@ defmodule VICI.Server do
   def handle_info(:accept, {l_sock, _client}) do
     {:ok, s} = :gen_tcp.accept(l_sock)
     Logger.info "Accepted #{inspect s}"
-    {:noreply, {l_sock, true}}
+    {:noreply, {l_sock, false}}
   end
 
-  def handle_info({:tcp, sock, <<0::integer, cmd_len::integer, cmd::binary-size(cmd_len), args::binary()>>}, l_sock) do
+  def handle_info({:tcp, sock, <<0::integer, cmd_len::integer, cmd::binary-size(cmd_len), args::binary()>>}, {l_sock, stream}) do
     Logger.info("Command: #{cmd}")
     Logger.info("Client Socket: #{inspect sock}")
     case handle_command(cmd, sock, deserialize(args)) do
       :unknown_cmd -> unknown_command(sock)
-      res -> reply(res, sock)
+      res ->
+        case stream do
+          false -> reply(res, sock)
+          _ -> :noop
+        end
     end
-    {:noreply, l_sock}
+    {:noreply, {l_sock, stream}}
   end
 
-  def handle_info({:tcp, sock, <<3::integer, cmd_len::integer, cmd::binary-size(cmd_len), args::binary()>>}, l_sock) do
+  def handle_info({:tcp, sock, <<3::integer, cmd_len::integer, cmd::binary-size(cmd_len), args::binary()>>}, {l_sock, stream}) do
     Logger.info("Command: #{cmd}")
     Logger.info("Client Socket: #{inspect sock}")
     case handle_event(cmd, sock, deserialize(args)) do
       :unknown_cmd -> unknown_event(sock)
       res -> confirm(res, sock)
     end
-    {:noreply, l_sock}
+    {:noreply, {l_sock, true}}
   end
 
   def handle_info({:tcp, sock, <<4::integer, cmd_len::integer, cmd::binary-size(cmd_len)>>}, {l_sock, _c}) do
@@ -94,9 +97,10 @@ defmodule VICI.Server do
 
   def handle_info({:sas, sock}, {_l_sock, true} = state) do
     Enum.each(1..100, fn _i ->
-      stream(generate_sas(), sock)
+      stream(list_sa(), sock)
       Process.sleep(100)
     end)
+    reply(%{}, sock)
     {:noreply, state}
   end
 
@@ -104,9 +108,10 @@ defmodule VICI.Server do
 
   def handle_info({:log, sock}, {_l_sock, true} = state) do
     Enum.each(1..100, fn _i ->
-      stream(generate_log(), sock)
+      stream(log(), sock)
       Process.sleep(100)
     end)
+    reply(%{}, sock)
     {:noreply, state}
   end
 
@@ -118,62 +123,25 @@ defmodule VICI.Server do
     %{}
   end
 
-  defp handle_event(_, _, _), do: :unknown_cmd
-
-  defp handle_command(cmd, sock, args \\ %{})
-  defp handle_command("version", _sock, _args) do
-    %{
-      daemon: "charon",
-      machine: "x86_64",
-      release: "4.15.0-45-generic",
-      sysname: "Linux",
-      version: "5.4.0"
-    }
-  end
-
-  defp handle_command("stats", _sock, _args) do
-    %{
-      ikesas: %{"half-open": 0, total: 0},
-      plugins: ["charon", "random", "nonce", "x509", "revocation", "constraints",
-        "pubkey", "pkcs1", "pkcs7", "pkcs8", "pkcs12", "pgp", "dnskey", "sshkey",
-        "pem", "openssl", "fips-prf", "gmp", "xcbc", "cmac", "curl", "sqlite",
-        "attr", "kernel-netlink", "resolve", "socket-default", "farp", "stroke",
-        "vici", "updown", "eap-identity", "eap-sim", "eap-aka", "eap-aka-3gpp2",
-        "eap-simaka-pseudonym", "eap-simaka-reauth", "eap-md5", "eap-mschapv2",
-        "eap-radius", "eap-tls", "xauth-generic", "xauth-eap", "dhcp", "unity"
-      ],
-      queues: %{critical: 0, high: 0, low: 0, medium: 0}, scheduled: 0,
-      uptime: %{running: "2 hours", since: "Mar 03 19:14:47 2019"},
-      workers: %{active: %{critical: 4, high: 0, low: 0, medium: 1}, idle: 11,
-      total: 16}
-    }
-  end
-
-  defp handle_command("list-sas", sock, _args) do
+  defp handle_event("list-sa", sock, _args) do
     Process.send_after(self(), {:sas, sock}, 100)
     %{}
   end
 
+  defp handle_event(_, _, _), do: :unknown_cmd
+
+  defp handle_command(cmd, sock, args \\ %{})
+  defp handle_command("version", _sock, _args) do
+    version()
+  end
+
+  defp handle_command("stats", _sock, _args) do
+    stats()
+  end
+
+  defp handle_command("list-sas", _sock, _args) do
+    %{}
+  end
+
   defp handle_command(_, _, _), do: :unknown_cmd
-
-  defp generate_log do
-    %{
-      group: "ike",
-      level: 2,
-      thread: 4,
-      "ikesa-name": "kiosk-10-a",
-      "ikesa-uniqued": "sd876876",
-      msg: "this is a log message"
-    }
-  end
-
-  defp generate_sas do
-    %{
-      id: :rand.uniform(99999),
-      bytes_in: :rand.uniform(9999999999999),
-      bytes_out: :rand.uniform(9999999999999),
-      packets_in: :rand.uniform(9999999999999),
-      packets_out: :rand.uniform(9999999999999)
-    }
-  end
 end
