@@ -1,8 +1,9 @@
-defmodule VICITest do
+defmodule VICIProtocolTest do
   use ExUnit.Case
   doctest VICI
 
   import VICI.Protocol
+  import VICI.Server.Generator
 
   @atom_map %{
     test: "ok",
@@ -44,6 +45,10 @@ defmodule VICITest do
 
   test "atom map serialize and deserialize" do
     assert deserialize(serialize(@atom_map)) == @atom_map
+  end
+
+  test "tuple(Named Event) serialize and deserialize" do
+    assert deserialize(serialize(list_sa())) == list_sa()
   end
 
   test "nil returns empty binary" do

@@ -35,6 +35,12 @@ defmodule VICI.Server do
     :gen_tcp.send(sock, packet)
   end
 
+  defp malformed_response(sock) do
+    Logger.info "Malformed Response"
+    packet = <<100::integer-size(8)>>
+    :gen_tcp.send(sock, packet)
+  end
+
   defp unknown_command(sock) do
     Logger.info "Uknown Command"
     packet = <<2::integer-size(8)>>
@@ -57,7 +63,12 @@ defmodule VICI.Server do
     Logger.info("Command: #{cmd}")
     Logger.info("Client Socket: #{inspect sock}")
     case handle_command(cmd, sock, deserialize(args)) do
-      :unknown_cmd -> unknown_command(sock)
+      :unknown_cmd ->
+        unknown_command(sock)
+
+      :malformed_data ->
+        malformed_response(sock)
+
       res ->
         case stream do
           false -> reply(res, sock)
@@ -71,8 +82,15 @@ defmodule VICI.Server do
     Logger.info("Command: #{cmd}")
     Logger.info("Client Socket: #{inspect sock}")
     case handle_event(cmd, sock, deserialize(args)) do
-      :unknown_cmd -> unknown_event(sock)
-      res -> confirm(res, sock)
+      :unknown_cmd ->
+        unknown_event(sock)
+
+      :malformed_data ->
+        confirm(%{}, sock)
+        malformed_response(sock)
+
+      res ->
+        confirm(res, sock)
     end
     {:noreply, {l_sock, true}}
   end
@@ -96,9 +114,9 @@ defmodule VICI.Server do
   end
 
   def handle_info({:sas, sock}, {_l_sock, true} = state) do
-    Enum.each(1..100, fn _i ->
+    Enum.each(1..10, fn _i ->
       stream(list_sa(), sock)
-      Process.sleep(100)
+      Process.sleep(10)
     end)
     reply(%{}, sock)
     {:noreply, state}
@@ -107,9 +125,9 @@ defmodule VICI.Server do
   def handle_info({:sas, _sock}, state), do: {:noreply, state}
 
   def handle_info({:log, sock}, {_l_sock, true} = state) do
-    Enum.each(1..100, fn _i ->
+    Enum.each(1..10, fn _i ->
       stream(log(), sock)
-      Process.sleep(100)
+      Process.sleep(10)
     end)
     reply(%{}, sock)
     {:noreply, state}
@@ -123,10 +141,16 @@ defmodule VICI.Server do
     %{}
   end
 
+  defp handle_event("list-conn", _sock, _args) do
+    %{}
+  end
+
   defp handle_event("list-sa", sock, _args) do
     Process.send_after(self(), {:sas, sock}, 100)
     %{}
   end
+
+  defp handle_event("list-cert", _, _), do: :malformed_data
 
   defp handle_event(_, _, _), do: :unknown_cmd
 
@@ -142,6 +166,13 @@ defmodule VICI.Server do
   defp handle_command("list-sas", _sock, _args) do
     %{}
   end
+
+  defp handle_command("get-conns", _sock, _args) do
+    Process.sleep(5000)
+    %{}
+  end
+
+  defp handle_command("reload-settings", _, _), do: :malformed_data
 
   defp handle_command(_, _, _), do: :unknown_cmd
 end
