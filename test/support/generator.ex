@@ -91,8 +91,8 @@ defmodule VICI.Server.Generator do
        "cluster-eks-research": %{
          "child-sas": %{
            "cluster-eks-research-1078": %{
-             "bytes-in": 0,
-             "bytes-out": 0,
+             "bytes-in": 872364,
+             "bytes-out": 28937492874,
              "dh-group": "MODP_3072",
              encap: "yes",
              "encr-alg": "AES_CBC",
@@ -103,8 +103,8 @@ defmodule VICI.Server.Generator do
              "local-ts": ["0.0.0.0/0"],
              mode: "TUNNEL",
              name: "cluster-eks-research",
-             "packets-in": 0,
-             "packets-out": 0,
+             "packets-in": 203948029384,
+             "packets-out": 298374,
              protocol: "ESP",
              "rekey-time": -761,
              "remote-ts": ["10.25.0.0/16"],
@@ -115,8 +115,8 @@ defmodule VICI.Server.Generator do
              uniqueid: 1078
            },
            "cluster-eks-research-1338": %{
-             "bytes-in": 0,
-             "bytes-out": 0,
+             "bytes-in": 99999,
+             "bytes-out": 209384029384,
              "dh-group": "MODP_3072",
              encap: "yes",
              "encr-alg": "AES_CBC",
@@ -127,8 +127,8 @@ defmodule VICI.Server.Generator do
              "local-ts": ["0.0.0.0/0"],
              mode: "TUNNEL",
              name: "cluster-eks-research",
-             "packets-in": 0,
-             "packets-out": 0,
+             "packets-in": 298374,
+             "packets-out": 29384,
              protocol: "ESP",
              "rekey-time": 1886,
              "remote-ts": ["10.25.0.0/16"],
