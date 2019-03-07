@@ -13,7 +13,7 @@ defmodule VICI.Server.Generator do
     {:"child-updown",
      %{
        up: "true",
-       test_sa: list_sa() |> elem(1)
+       test_sa: list_sa() |> elem(1) |> get_in([:"cluster-eks-research", :"child-sas"])
      }}
   end
 
