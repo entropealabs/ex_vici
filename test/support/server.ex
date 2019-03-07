@@ -9,10 +9,17 @@ defmodule VICI.Server do
     GenServer.start_link(__MODULE__, port)
   end
 
-  def init(port) do
+  def init(port) when is_integer(port) do
     {:ok, l_sock} = :gen_tcp.listen(port, [:binary, {:mode, :binary}, {:packet, 4}])
-    Process.send_after(self(), :accept, 0)
+    Enum.each(1..10, fn _ ->
+      __MODULE__.start_link(l_sock)
+    end)
     {:ok, {l_sock, false}}
+  end
+
+  def init(sock) when is_port(sock) do
+    Process.send_after(self(), :accept, 0)
+    {:ok, {sock, false}}
   end
 
   defp reply(data, sock) do
