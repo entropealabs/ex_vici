@@ -1,9 +1,8 @@
 defmodule VICIConnectionTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest VICI
 
   alias VICI.{Connection, Server}
-  import VICI.Protocol
   import Server.Generator
 
   setup _ctx do
