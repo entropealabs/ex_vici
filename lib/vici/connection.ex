@@ -4,21 +4,39 @@ defmodule VICI.Connection do
 
   def request(address, port, command, args \\ %{}) do
     debug("Registering Command: #{command}")
-    {:ok, sock} = connect(address, port)
-    send(:request, command, args, sock)
+
+    case connect(address, port) do
+      {:ok, sock} ->
+        send(:request, command, args, sock)
+
+      err ->
+        err
+    end
   end
 
   def request_stream(address, port, {command, event}, args \\ %{}, timeout \\ 1000) do
     debug("Registering Event: #{event}")
     debug("Registering Command: #{command}")
-    {:ok, sock} = connect(address, port)
-    send(:request_stream, command, event, args, timeout, sock)
+
+    case connect(address, port) do
+      {:ok, sock} ->
+        send(:request_stream, command, event, args, timeout, sock)
+
+      err ->
+        err
+    end
   end
 
   def register(address, port, event, timeout \\ 1000) do
     debug("Registering Event: #{event}")
-    {:ok, sock} = connect(address, port)
-    send(:register, event, timeout, sock)
+
+    case connect(address, port) do
+      {:ok, sock} ->
+        send(:register, event, timeout, sock)
+
+      err ->
+        err
+    end
   end
 
   defp connect(address, port) when is_list(address) do
@@ -61,10 +79,12 @@ defmodule VICI.Connection do
         debug("Request Complete")
         :gen_tcp.close(sock)
         {:ok, deserialize(data)}
+
       {:tcp, _port, <<2::integer>>} ->
         debug("Unknown Command")
         :gen_tcp.close(sock)
         {:error, :unknown_command}
+
       o ->
         debug("Unknown Message: #{inspect(o)}")
         loop_request(sock)
