@@ -158,6 +158,9 @@ defmodule VICI.Server.Generator do
          "remote-id": "34.214.198.129",
          "remote-port": 4500,
          "responder-spi": "6768c8c1f1599462",
+         "tasks-queued": ["TASK_IKE_INIT", "TASK_IKE_INIT", "TASK_IKE_REAUTH", "TASK_IKE_REAUTH"],
+         "tasks-active": ["TASK_IKE_INIT", "TASK_IKE_INIT", "TASK_IKE_REAUTH", "TASK_IKE_REAUTH"],
+         "tasks-passive": ["TASK_IKE_INIT", "TASK_IKE_INIT", "TASK_IKE_REAUTH", "TASK_IKE_REAUTH"],
          state: "ESTABLISHED",
          uniqueid: 3,
          version: 1
